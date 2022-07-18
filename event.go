@@ -3,15 +3,15 @@ package jog
 import "syscall/js"
 
 type Event struct {
-	js.Value
+	JSValue js.Value
 }
 
 type EventListener interface {
-	HandleEvent(event Event)
+	HandleEvent(event Event) any
 }
 
-type EventListenerFunc func(event Event)
+type Listener func(event Event) any
 
-func (f EventListenerFunc) HandleEvent(event Event) {
-	f(event)
+func (f Listener) HandleEvent(event Event) any {
+	return f(event)
 }

@@ -1,10 +1,22 @@
 package jog
 
-import (
-	"context"
-	"syscall/js"
-)
+import "syscall/js"
 
-type Node interface {
-	JSValue(ctx context.Context) js.Value
+type Node struct {
+	current   *js.Value
+	generator Generator
+}
+
+func (n *Node) ToJSValue() js.Value {
+	value := n.generator.Generate()
+	n.current = &value
+	return value
+}
+
+func (n *Node) update(newNode *Node) {
+	oldValue := n.current
+	newValue := newNode.ToJSValue()
+
+	oldValue.Call("replaceWith", newValue)
+	n.current = &newValue
 }

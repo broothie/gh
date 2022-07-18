@@ -1,13 +1,13 @@
 package jog
 
-import (
-	"context"
-	"html"
-	"syscall/js"
-)
+import "syscall/js"
 
-type Text string
+func Text(s string) *Node {
+	return &Node{generator: text(s)}
+}
 
-func (t Text) JSValue(context.Context) js.Value {
-	return Document().Call("createTextNode", html.EscapeString(string(t)))
+type text string
+
+func (t text) Generate() js.Value {
+	return document.Call("createTextNode", string(t))
 }

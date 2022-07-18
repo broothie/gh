@@ -1,56 +1,60 @@
 package jog
 
 import (
-	"context"
 	"strings"
 	"syscall/js"
 )
 
+func Element(name string, attributes Attr, children ...*Node) *Node {
+	return &Node{
+		generator: element{
+			name:       name,
+			attributes: attributes,
+			children:   children,
+		},
+	}
+}
+
+func Div(attributes Attr, children ...*Node) *Node {
+	return Element("div", attributes, children...)
+}
+
+func P(attributes Attr, children ...*Node) *Node {
+	return Element("p", attributes, children...)
+}
+
+func Input(attributes Attr, children ...*Node) *Node {
+	return Element("input", attributes, children...)
+}
+
 type Attr map[string]any
 
-type Element struct {
-	Tag        string
-	Attributes Attr
-	Children   []Node
-
-	subscriptions []string
+type element struct {
+	name       string
+	attributes Attr
+	children   []*Node
 }
 
-func NewElement(tag string, attr Attr, children ...Node) Element {
-	return Element{Tag: tag, Attributes: attr, Children: children}
-}
+func (e element) Generate() js.Value {
+	el := document.Call("createElement", e.name)
 
-func Div(attr Attr, children ...Node) Element {
-	return NewElement("div", attr, children...)
-}
-
-func P(attr Attr, children ...Node) Element {
-	return NewElement("p", attr, children...)
-}
-
-func Input(attr Attr, children ...Node) Element {
-	return NewElement("input", attr, children...)
-}
-
-func (e Element) JSValue(ctx context.Context) js.Value {
-	element := Document().Call("createElement", e.Tag)
-
-	for key, value := range e.Attributes {
+	for key, value := range e.attributes {
 		if strings.HasPrefix(key, "on") {
-			element.Call("addEventListener", strings.TrimPrefix(key, "on"), js.ValueOf(value))
+			if listener, ok := value.(EventListener); ok {
+				el.Call("addEventListener", strings.TrimPrefix(key, "on"), js.FuncOf(func(_ js.Value, args []js.Value) any {
+					return listener.HandleEvent(Event{JSValue: args[0]})
+				}))
+			} else {
+				el.Call("addEventListener", strings.TrimPrefix(key, "on"), value)
+			}
 		} else {
-			element.Call("setAttribute", key, js.ValueOf(value))
+			el.Call("setAttribute", key, value)
 		}
 	}
 
-	for _, child := range e.Children {
-		element.Call("appendChild", child.JSValue(ctx))
+	for _, child := range e.children {
+		el.Call("appendChild", child.ToJSValue())
 	}
 
-	jCtx := jogCtx(ctx)
-	for _, subscription := range e.subscriptions {
-		jCtx.subscriptions[subscription] = append(jCtx.subscriptions[subscription], element)
-	}
-
-	return element
+	return el
 }
