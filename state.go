@@ -1,20 +1,22 @@
 package jog
 
+import "syscall/js"
+
 type State struct {
 	parent        *State
 	values        map[string]any
-	subscriptions map[string][]subscription
+	subscriptions map[string][]*subscription
 }
 
 type subscription struct {
-	node    *Node
+	current js.Value
 	watcher StateWatcher
 }
 
 func NewState() *State {
 	return &State{
 		values:        make(map[string]any),
-		subscriptions: make(map[string][]subscription),
+		subscriptions: make(map[string][]*subscription),
 	}
 }
 
@@ -42,9 +44,13 @@ func (s *State) Set(name string, value any) {
 			current.values[name] = value
 
 			for _, subscription := range current.subscriptions[name] {
-				node := subscription.watcher(value)
-				subscription.node.update(node)
-				subscription.node = node
+				if !subscription.current.Get("isConnected").Truthy() {
+					continue
+				}
+
+				jsValue := subscription.watcher(value).Generate()
+				subscription.current.Call("replaceWith", jsValue)
+				subscription.current = jsValue
 			}
 
 			return
@@ -54,29 +60,29 @@ func (s *State) Set(name string, value any) {
 	s.values[name] = value
 }
 
-type StateWatcher func(value any) *Node
+type StateWatcher func(value any) Generator
 
-func (s *State) Watch(name string, watcher StateWatcher) *Node {
-	node := watcher(s.Get(name))
+func (s *State) Watch(name string, watcher StateWatcher) GeneratorFunc {
+	sub := &subscription{watcher: watcher}
 
 	for current := s; current != nil; current = current.parent {
 		if _, found := current.values[name]; found {
-			current.subscriptions[name] = append(current.subscriptions[name], subscription{
-				node:    node,
-				watcher: watcher,
-			})
-
+			current.subscriptions[name] = append(current.subscriptions[name], sub)
 			break
 		}
 	}
 
-	return node
+	return func() js.Value {
+		value := watcher(s.Get(name)).Generate()
+		sub.current = value
+		return value
+	}
 }
 
 func (s *State) NewChild() *State {
 	return &State{
 		parent:        s,
 		values:        make(map[string]any),
-		subscriptions: make(map[string][]subscription),
+		subscriptions: make(map[string][]*subscription),
 	}
 }

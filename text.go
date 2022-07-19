@@ -2,12 +2,8 @@ package jog
 
 import "syscall/js"
 
-func Text(s string) *Node {
-	return &Node{generator: text(s)}
-}
+type Text string
 
-type text string
-
-func (t text) Generate() js.Value {
+func (t Text) Generate() js.Value {
 	return document.Call("createTextNode", string(t))
 }
