@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/broothie/gh"
-	"github.com/broothie/gh/promise"
 	"github.com/samber/lo"
 )
 
@@ -18,18 +17,21 @@ func main() {
 			gh.Input(gh.Attr{"onkeyup": gh.Listener(func(event gh.Event) any {
 				query := event.Target().Value().String()
 
-				promise.From(func() (*http.Response, error) {
-					return http.Get(fmt.Sprintf("/api/users?query=%s", query))
-				}).
-					Then(func(response *http.Response) {
-						var results []string
-						if err := json.NewDecoder(response.Body).Decode(&results); err != nil {
-							gh.Console.Log(err)
-							return
-						}
+				go func() {
+					response, err := http.Get(fmt.Sprintf("/api/users?query=%s", query))
+					if err != nil {
+						gh.Console.Error(err)
+						return
+					}
 
-						state.Set("results", results)
-					})
+					var results []string
+					if err := json.NewDecoder(response.Body).Decode(&results); err != nil {
+						gh.Console.Error(err)
+						return
+					}
+
+					state.Set("results", results)
+				}()
 
 				return nil
 			})}),

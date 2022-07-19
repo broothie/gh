@@ -1,6 +1,10 @@
 package gh
 
-import "syscall/js"
+import (
+	"syscall/js"
+
+	"github.com/samber/lo"
+)
 
 type State struct {
 	parent        *State
@@ -43,15 +47,23 @@ func (s *State) Set(name string, value any) {
 		if _, found := current.values[name]; found {
 			current.values[name] = value
 
-			for _, subscription := range current.subscriptions[name] {
-				if !subscription.current.Get("isConnected").Truthy() {
+			var removals []*subscription
+			for _, sub := range current.subscriptions[name] {
+				if !sub.current.Get("isConnected").Truthy() {
+					removals = append(removals, sub)
 					continue
 				}
 
-				jsValue := subscription.watcher(value).Generate()
-				subscription.current.Call("replaceWith", jsValue)
-				subscription.current = jsValue
+				go func(sub *subscription) {
+					jsValue := sub.watcher(value).Generate()
+					sub.current.Call("replaceWith", jsValue)
+					sub.current = jsValue
+				}(sub)
 			}
+
+			current.subscriptions[name] = lo.Filter(current.subscriptions[name], func(sub *subscription, _ int) bool {
+				return !lo.Contains(removals, sub)
+			})
 
 			return
 		}
