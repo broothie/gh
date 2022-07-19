@@ -5,6 +5,7 @@ import (
 
 	"github.com/broothie/gh"
 	"github.com/broothie/gh/util"
+	"github.com/samber/lo"
 )
 
 type Store[T any] struct {
@@ -29,7 +30,14 @@ func (s *Store[T]) Modify(modify func(*T)) {
 func (s *Store[T]) Update(value T) {
 	previous := s.value
 	s.value = value
+
+	var removals []*subscription[T]
 	for _, sub := range s.subscriptions {
+		if !sub.current.Call("isConnected").Truthy() {
+			removals = append(removals, sub)
+			continue
+		}
+
 		if sub.changed(util.DeepCopy(previous), util.DeepCopy(value)) {
 			go func(sub *subscription[T]) {
 				jsValue := sub.handler(util.DeepCopy(value)).Generate()
@@ -38,6 +46,8 @@ func (s *Store[T]) Update(value T) {
 			}(sub)
 		}
 	}
+
+	s.subscriptions = lo.Without(s.subscriptions, removals...)
 }
 
 type Changed[T any] func(T, T) bool
@@ -63,21 +73,17 @@ func (s *Store[T]) Watch(changed Changed[T], handler Handler[T]) gh.Generator {
 	})
 }
 
-func WatchSelection[T any, U comparable](
-		store *Store[T],
-		selector func(T) U,
-		handler func(U) gh.Generator,
-) gh.Generator {
-	return store.Watch(
-		func(a, b T) bool { return selector(a) != selector(b) },
-		func(value T) gh.Generator { return handler(selector(value)) },
-	)
-}
-
 func WatchMapLengthChanged[K comparable, V any](a, b map[K]V) bool {
 	return len(a) != len(b)
 }
 
 func WatchSliceLengthChanged[V any](a, b []V) bool {
 	return len(a) != len(b)
+}
+
+func WatchSelection[T any, U comparable](store *Store[T], selector func(T) U, handler func(U) gh.Generator) gh.Generator {
+	return store.Watch(
+		func(a, b T) bool { return selector(a) != selector(b) },
+		func(value T) gh.Generator { return handler(selector(value)) },
+	)
 }
