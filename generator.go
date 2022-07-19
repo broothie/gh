@@ -1,8 +1,6 @@
-package jog
+package gh
 
-import (
-	"syscall/js"
-)
+import "syscall/js"
 
 type Generator interface {
 	Generate() js.Value

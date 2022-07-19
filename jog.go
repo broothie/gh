@@ -1,7 +1,9 @@
-package jog
+package gh
+
+type BuildFunc func(state *State) Generator
 
 func Mount(id string, builder BuildFunc) {
-	element := document.Call("getElementById", id)
+	element := Document.Call("getElementById", id)
 	element.Call("appendChild", builder(NewState()).Generate())
 }
 

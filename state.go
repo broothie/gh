@@ -1,4 +1,4 @@
-package jog
+package gh
 
 import "syscall/js"
 

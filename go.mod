@@ -1,4 +1,4 @@
-module github.com/broothie/jog
+module github.com/broothie/gh
 
 go 1.18
 
