@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/samber/lo"
 )
 
 func main() {
@@ -34,6 +37,16 @@ func main() {
 		}
 
 		fileServer.ServeHTTP(w, r)
+	})
+
+	users := []string{"andrew", "broothie", "tiffany"}
+	http.HandleFunc("/api/users", func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query().Get("query")
+		users := lo.Filter(users, func(user string, i int) bool { return strings.Contains(user, query) })
+
+		if err := json.NewEncoder(w).Encode(users); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	})
 
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil); err != nil {
