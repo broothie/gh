@@ -2,10 +2,7 @@ package gh
 
 import "syscall/js"
 
-var (
-	Document = document{Value: js.Global().Get("document")}
-	Console  = console{Value: js.Global().Get("console")}
-)
+var Document = document{Value: js.Global().Get("document")}
 
 type document struct {
 	js.Value
@@ -21,16 +18,4 @@ func (d document) CreateTextNode(text string) js.Value {
 
 func (d document) AppendChild(child js.Value) js.Value {
 	return d.Call("appendChild", child)
-}
-
-type console struct {
-	js.Value
-}
-
-func (c console) Log(v ...any) {
-	c.Call("log", v...)
-}
-
-func (c console) Error(v ...any) {
-	c.Call("error", v...)
 }

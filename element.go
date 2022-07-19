@@ -1,6 +1,7 @@
 package gh
 
 import (
+	"fmt"
 	"strings"
 	"syscall/js"
 )
@@ -22,7 +23,7 @@ func Element(name string, attributes Attr, children ...Generator) GeneratorFunc 
 
 				el.Call("addEventListener", strings.TrimPrefix(key, "on"), eventListener)
 			} else {
-				el.Call("setAttribute", key, value)
+				el.Call("setAttribute", key, fmt.Sprint(value))
 			}
 		}
 

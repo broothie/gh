@@ -1,9 +1,12 @@
 package gh
 
-import "syscall/js"
+import (
+	"fmt"
+	"syscall/js"
+)
 
-type Text string
-
-func (t Text) Generate() js.Value {
-	return Document.CreateTextNode(string(t))
+func Text(value any) GeneratorFunc {
+	return func() js.Value {
+		return Document.CreateTextNode(fmt.Sprint(value))
+	}
 }

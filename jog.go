@@ -1,10 +1,8 @@
 package gh
 
-type BuildFunc func(state *State) Generator
-
-func Mount(id string, builder BuildFunc) {
+func Mount(id string, generator Generator) {
 	element := Document.Call("getElementById", id)
-	element.Call("appendChild", builder(NewState()).Generate())
+	element.Call("appendChild", generator.Generate())
 }
 
 func Wait() {

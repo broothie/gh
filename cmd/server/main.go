@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/broothie/gh/model"
 	"github.com/samber/lo"
 )
 
@@ -30,6 +31,7 @@ func main() {
 			cmd.Stderr = os.Stderr
 			cmd.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
 
+			fmt.Println(cmd.String())
 			if err := cmd.Run(); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -39,10 +41,14 @@ func main() {
 		fileServer.ServeHTTP(w, r)
 	})
 
-	users := []string{"andrew", "broothie", "tiffany"}
+	users := []model.User{
+		{ID: "0", Username: "broothie", Age: 29},
+		{ID: "1", Username: "chenstiffany", Age: 29},
+	}
+
 	http.HandleFunc("/api/users", func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query().Get("query")
-		users := lo.Filter(users, func(user string, i int) bool { return strings.Contains(user, query) })
+		users := lo.Filter(users, func(user model.User, i int) bool { return strings.Contains(user.Username, query) })
 
 		if err := json.NewEncoder(w).Encode(users); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
